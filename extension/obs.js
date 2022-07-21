@@ -18,7 +18,7 @@ const obsWebSocket = new OBSWebSocket();
 var isConnecting = false;
 var waitSceneTimer = null;
 var sceneSwitchTimer = null;
-
+var lastScene = "";
 
 //Utils
 function checkAndSetNewScene(sceneName) {
@@ -48,74 +48,47 @@ function checkAndSetNewScene(sceneName) {
 
 function checkSceneSwitchConditions() {
 
-	let targetScene = "";
-
+	// if (!tournament.value.autoScore && !slippi.value.gameInfo.finished) {
+	// 	return "TO: Handwarmer";
+	// }
+	// else if (tournament.value.autoScore && !slippi.value.gameInfo.finished) {
+	// 	return "TO: Tournament";
+	// }
 	if (!tournament.value.autoScore && !slippi.value.gameInfo.finished) {
-		targetScene = "Handwarmer";
-	}
-	else if (tournament.value.autoScore && !slippi.value.gameInfo.finished) {
-		targetScene = "Tournament";
+	 	return "Melee Stream";
 	}
 	else if (slippi.value.gameInfo.finished && tournament.value.matchScored && obs.value.scenes.activeScene && obs.value.scenes.activeScene != "Wait") {
 
 		//Skip stats scenes in Doubles mode as there are no stats available, go straight to Wait Scene
 		if (slippi.value.gameInfo.isTeams) {
-			targetScene = "Wait";
+			return "TO: Wait";
 		}
 		else {
 
-			//If enabled, start Wait Scene timer no matter what if needed in Singles mode
-			if (!waitSceneTimer) {
+			//Start Wait Scene timer no matter what if needed in Singles mode | I don't see waitSceneTimer used?
+			// if (!waitSceneTimer) {
+			// 	console.log(`DEBUG: Switching to TO: Wait`);
+			// 	waitSceneTimer = setTimeout(() => {
+			// 		checkAndSetNewScene("TO: Wait");
+			// 	}, obs.value.scenes.waitTime);
+			// }
 
-				let switchEnabled = nodecg.bundleConfig.obs && nodecg.bundleConfig.obs.scenes && "Wait" in nodecg.bundleConfig.obs.scenes && "autoSwitch" in nodecg.bundleConfig.obs.scenes["Wait"] ? nodecg.bundleConfig.obs.scenes["Wait"].autoSwitch : true;
-
-				if (switchEnabled) {
-					waitSceneTimer = setTimeout(() => {
-						checkAndSetNewScene("Wait");
-					}, obs.value.scenes.waitTime);
-				}
-			}
-
-			if (obs.value.scenes.activeScene != "Game End" && obs.value.scenes.activeScene != "Set End") {
+			if (obs.value.scenes.activeScene != "TO: Game End" && obs.value.scenes.activeScene != "TO: Set End") {
 
 				if (tournament.value.scores[0].score < (tournament.value.bestOf / 2) && tournament.value.scores[1].score < (tournament.value.bestOf / 2)) {
-					targetScene = "Game End";
+					return "TO: Game End";
 				}
 				else if (tournament.value.scores[0].score > (tournament.value.bestOf / 2) || tournament.value.scores[1].score > (tournament.value.bestOf / 2)) {
-					targetScene = "Set End";
+					return "TO: Set End";
 				}
 			}
 		}
 	}
-
-	//Account for adjustment logic from user config
-	if (targetScene) {
-		let switchEnabled = nodecg.bundleConfig.obs && nodecg.bundleConfig.obs.scenes && targetScene in nodecg.bundleConfig.obs.scenes && "autoSwitch" in nodecg.bundleConfig.obs.scenes[targetScene] ? nodecg.bundleConfig.obs.scenes[targetScene].autoSwitch : true;
-
-		if (!switchEnabled) {
-
-			let gameEnabled = "Game End" in nodecg.bundleConfig.obs.scenes && "autoSwitch" in nodecg.bundleConfig.obs.scenes["Game End"] ? nodecg.bundleConfig.obs.scenes["Game End"].autoSwitch : true;
-			let setEnabled = "Set End" in nodecg.bundleConfig.obs.scenes && "autoSwitch" in nodecg.bundleConfig.obs.scenes["Set End"] ? nodecg.bundleConfig.obs.scenes["Set End"].autoSwitch : true;
-
-			//Swap to another fitting end scene if possible
-			if (targetScene == "Game End" && setEnabled) {
-				targetScene = "Set End";
-			}
-			else if (targetScene == "Set End" && gameEnabled) {
-				targetScene = "Game End";
-			}
-			else {
-				//Block the switch if disabled entirely
-				targetScene = "";
-			}
-		}
-	}
-
-	return targetScene;
+	console.log(`returning default scene TO: Game End`);
+	return "TO: Game End";
 }
 
 function autoDetermineCorrectScene(sceneNameOverride = "") {
-
 	if (isConnecting || !obs.value.connection.connected)
 		return;
 
@@ -123,7 +96,12 @@ function autoDetermineCorrectScene(sceneNameOverride = "") {
 		return;
 
 	let newScene = sceneNameOverride === "" ? checkSceneSwitchConditions() : sceneNameOverride;
-	checkAndSetNewScene(newScene);
+	if (lastScene != newScene) {
+		console.log(`switching scene to ${newScene}`)
+		checkAndSetNewScene(newScene);
+		lastScene = newScene;
+	}
+		
 }
 
 //Replicant Listeners
@@ -171,7 +149,6 @@ slippi.on('change', (newVal, oldVal) => {
 		clearTimeout(waitSceneTimer);
 		waitSceneTimer = null;
 	}
-
 	autoDetermineCorrectScene();
 });
 

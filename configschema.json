@@ -39,7 +39,7 @@
 				"scenes": {
 					"type": "object",
 					"properties": {
-						"Handwarmer": {
+						"Melee Stream": {
 							"type": "object",
 							"properties": {
 								"autoSwitch": {
@@ -51,7 +51,7 @@
 								}
 							}
 						},
-						"Tournament": {
+						"TO: Handwarmer": {
 							"type": "object",
 							"properties": {
 								"autoSwitch": {
@@ -63,7 +63,15 @@
 								}
 							}
 						},
-						"Game End": {
+						"TO: Tournament": {
+							"type": "object",
+							"properties": {
+								"delay": {
+									"default": 0
+								}
+							}
+						},
+						"TO: Game End": {
 							"type": "object",
 							"properties": {
 								"autoSwitch": {
@@ -75,7 +83,7 @@
 								}
 							}
 						},
-						"Set End": {
+						"TO: Set End": {
 							"type": "object",
 							"properties": {
 								"autoSwitch": {
@@ -87,7 +95,7 @@
 								}
 							}
 						},
-						"Wait": {
+						"TO: Wait": {
 							"type": "object",
 							"properties": {
 								"autoSwitch": {
