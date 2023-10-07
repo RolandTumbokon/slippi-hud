@@ -7,16 +7,13 @@ import {map} from 'lit/directives/map.js';
 var maxHistoryLength = 9;
 var imageWidth = 65; // in pixels
 
-var stickChange = 0;
-var startStick = "";
-var startAngle = 0;
 var inputHistory = [];
-var scaleX = -1;
 var buttons = {
 	pressed: false,
 	old: [],
 	new: []
 }
+var lastInputFrame = 0;
 var lastFrame = {
 	controlStick: "",
 	controlAngle: 0,
@@ -31,25 +28,18 @@ var lastFrame = {
 };
 var matchStarted = false;
 
-function commonLetter(a, b){
-    if(b.length < a.length)
-        return commonLetter(b, a)
-    for(var i = 0, len = a.length; i < len; i++) 
-        if(b.indexOf(a[i]) != -1)
-            return true;
-  
-    return false
-}
-
-
 
 export const template = function () {
 	if (this.generalData.slippi.finished) {
 		matchStarted = false;
+		inputHistory = [];
+		lastInputFrame = 0;
+		return html``;
 	}
 	if (!this.ready || !matchStarted && !this.generalData.slippi.finished) {
 		inputHistory = [];
 		matchStarted = true;
+		lastInputFrame = 0;
 		return html``;
 	}
 	
@@ -63,9 +53,6 @@ export const template = function () {
 
 	function change() {
 		hasChanged = true;
-		stickChange = 0;
-		startStick = "";
-		startAngle = 0;
 	}
 
 	function appendInput(string) {
@@ -85,79 +72,26 @@ export const template = function () {
 					CONTROL STICK
 	********************************************/
 	let controlStick = "";
-	let controlAngle = 0;
 	if (this.playerData[0].slippi.controller.mainStickY < -0.2750) {
 		controlStick = "D";
-		controlAngle += 0.5;
 	}
 	else if (this.playerData[0].slippi.controller.mainStickY > 0.2750) {
 		controlStick = "U";
-		controlAngle++;
 	}
 	if (this.playerData[0].slippi.controller.mainStickX < -0.2750) {
 		controlStick += "L";
-		controlAngle = controlAngle + .75;
 	}
 	else if (this.playerData[0].slippi.controller.mainStickX > 0.2750) {
 		controlStick += "R";
-		controlAngle = controlAngle % 1 + .25;
-	}
-	if (controlStick) {
-		controlAngle /= controlStick.length;
 	}
 
-	// See if it's any different from last frame
-
 	if (controlStick) {
-		if (!startStick) {
-			startStick = controlStick;
-			startAngle = controlAngle;
-		}
-		if (lastFrame.controlStick != controlStick) { // If control stick rolled along edges
-			if (commonLetter(lastFrame.controlStick, controlStick)) {
-				let angleDif = controlAngle - lastFrame.controlAngle;
-				if (angleDif < -0.5) { // U<->UR edge cases
-					startAngle--;
-				} else if (angleDif > 0.5) {
-					startAngle++;
-				}
-				scaleX = (controlAngle - startAngle > 0) ? -1 : 1;
-				stickChange = Math.min(Math.abs(controlAngle - startAngle) * 8, 7);
-			}
-			lastFrame.controlAngle = controlAngle;
-		}
-		if (stickChange > 0) {
-			appendInput(html`
-			<img src="img/buttons/Control_Stick-${startStick}.svg">
-			<div class="relative">
-				<img class="relative" src="img/buttons/Control_Stick-${controlStick}.svg">
-				<img class="absolute" src="img/buttons/${stickChange}.png" style="transform: rotate(${controlAngle}turn) scaleX(${scaleX});">
-			</div>`);
-		} else {
-			appendInput(html`<img src="img/buttons/Control_Stick-${controlStick}.svg">`)
-		}
-		
-	} else if (lastFrame.controlStick) { // Control Stick goes to neutral
-		if (stickChange > 0) {
-			appendInput(html`
-			<img src="img/buttons/Control_Stick-${startStick}.svg">
-			<div class="relative">
-				<img class="relative" src="img/buttons/Control_Stick-${lastFrame.controlStick}.svg">
-				<img class="absolute" src="img/buttons/${stickChange}.png" style="transform: rotate(${lastFrame.controlAngle}turn) scaleX(${scaleX});">
-			</div>`);
+		buttons.pressed = true;
+		appendInput(html`<img src="img/buttons/Control_Stick-${controlStick}.svg">`);
+		if (lastFrame.controlStick != controlStick) {
 			change();
-		} else if (!buttons.pressed) {
-			appendInput(html`<img src="img/buttons/Control_Stick-${lastFrame.controlStick}.svg">`)
-			change();
-		} else {
-			buttons.pressed = false;
 		}
-	} else { // Control Stick stays in neutral | edge case
-		startStick = "";
-		startAngle = 0;
-		stickChange = 0;
 	}
-	
 
 	/*******************************************
 					C STICK
@@ -175,8 +109,8 @@ export const template = function () {
 	else if (this.playerData[0].slippi.controller.cStickX > 0.2750) {
 		CStick += "R";
 	}
-	// See if it's any different from last frame
-	if (CStick && lastFrame.CStick != CStick) {
+
+	if (CStick) {
 		buttons.pressed = true;
 		appendInput(html`<img src="img/buttons/C-Stick-${CStick}.svg">`);
 		if (lastFrame.CStick != CStick) {
@@ -243,13 +177,14 @@ export const template = function () {
 		appendInput(html`<img src="img/buttons/Control_Stick-.svg">`);
 	}
 	// Adds to history if new input detected
-	newInput = html`<div class="input" id="${this.generalData.slippi.elapsedFrames}">${newInput}<div>`;
+	newInput = html`<div class="input" id="${this.generalData.slippi.elapsedFrames}">${this.generalData.slippi.elapsedFrames - lastInputFrame} ${newInput}<div>`;
 	if (hasChanged) {
-			inputHistory.unshift(newInput);
-			// Delete if history is full
-			if (inputHistory.length > maxHistoryLength) {
-				inputHistory.pop();
-			}
+		lastInputFrame = this.generalData.slippi.elapsedFrames;
+		inputHistory.unshift(newInput);
+		// Delete if history is full
+		if (inputHistory.length > maxHistoryLength) {
+			inputHistory.pop();
+		}
 	}
 
 
@@ -258,17 +193,14 @@ export const template = function () {
 			img {
 				width: ${imageWidth}px;
 			}
-
 			.input {
 				display: flex;
 			}
-			.relative {
-				position: relative;
-			}
-			.absolute {
-				position: absolute;
-				top: 0px;
-				left: 0px;
+			div {
+				font-size: ${imageWidth/2}px;
+				line-height: 65px;
+				color:#fff;
+				text-shadow: rgb(0, 0, 0) 3px 0px 0px, rgb(0, 0, 0) 2.83487px 0.981584px 0px, rgb(0, 0, 0) 2.35766px 1.85511px 0px, rgb(0, 0, 0) 1.62091px 2.52441px 0px, rgb(0, 0, 0) 0.705713px 2.91581px 0px, rgb(0, 0, 0) -0.287171px 2.98622px 0px, rgb(0, 0, 0) -1.24844px 2.72789px 0px, rgb(0, 0, 0) -2.07227px 2.16926px 0px, rgb(0, 0, 0) -2.66798px 1.37182px 0px, rgb(0, 0, 0) -2.96998px 0.42336px 0px, rgb(0, 0, 0) -2.94502px -0.571704px 0px, rgb(0, 0, 0) -2.59586px -1.50383px 0px, rgb(0, 0, 0) -1.96093px -2.27041px 0px, rgb(0, 0, 0) -1.11013px -2.78704px 0px, rgb(0, 0, 0) -0.137119px -2.99686px 0px, rgb(0, 0, 0) 0.850987px -2.87677px 0px, rgb(0, 0, 0) 1.74541px -2.43999px 0px, rgb(0, 0, 0) 2.44769px -1.73459px 0px, rgb(0, 0, 0) 2.88051px -0.838247px 0px;
 			}
 		</style>
 		<br>

@@ -1,11 +1,12 @@
 {
   "name": "slippi-hud",
   "description": "Slippi HUD",
-  "version": "3.0.0",
+  "version": "3.2.0",
   "contributors": [
     "Marwin Misselhorn",
     "Steven Knepper",
-    "PartlyAwesome"
+    "PartlyAwesome",
+    "yvng.h"
   ],
   "dependencies": {
     "@polymer/app-layout": "^3.0.0",
@@ -31,25 +32,28 @@
     "@polymer/paper-toast": "^3.0.0",
     "@polymer/paper-toolbar": "^3.0.0",
     "@polymer/polymer": "^3.0.0",
-    "@slippi/slippi-js": "^6.2.1",
     "@types/node": "^10.14.4",
-    "@vaadin/vaadin-button": "^20.0.5",
     "@vaadin/vaadin-checkbox": "^20.0.5",
     "@vaadin/vaadin-combo-box": "^20.0.5",
+    "@vaadin/vaadin-radio-button": "^20.0.5",
+    "@vaadin/vaadin-text-field": "^20.0.5",
+    "@vaadin/vaadin-button": "^20.0.5",
     "@vaadin/vaadin-grid": "^20.0.5",
     "@vaadin/vaadin-ordered-layout": "^20.0.5",
-    "@vaadin/vaadin-radio-button": "^20.0.5",
     "@vaadin/vaadin-select": "^20.0.5",
     "@vaadin/vaadin-template-renderer": "^21.0.0",
-    "@vaadin/vaadin-text-field": "^20.0.5",
-    "@vinceau/slp-realtime": "https://github.com/dragonbane0/slp-realtime/tarball/ade1ce10fd7fe58e91d4d951d361c5ec55b3f9a1",
     "@webcomponents/webcomponentsjs": "^2.2.10",
+    "@slippi/slippi-js": "^6.2.1",
+    "@vinceau/slp-realtime": "https://github.com/dragonbane0/slp-realtime/tarball/ade1ce10fd7fe58e91d4d951d361c5ec55b3f9a1",
     "got": "^11.8.5",
     "lit": "^2.2.7",
-    "obs-websocket-js": "^4.0.3",
+    "obs-websocket-js": "^5.0.3",
     "rxjs": "^6.6.7",
-    "slp-stats-nodecg": "https://github.com/dragonbane0/slp-stats-nodecg/tarball/554c9acc2901143920c7fd5ace2ae7ba62ecf867"
+    "slp-stats-nodecg": "https://github.com/dragonbane0/slp-stats-nodecg/tarball/192a49b67c749b0b7e7786e70cad360704f9003b"
   },
+  "devDependencies": {},
+  "optionalDependencies": {},
+  "bundleDependencies": [],
   "homepage": "",
   "license": "",
   "nodecg": {
@@ -62,7 +66,7 @@
         "width": 2,
         "file": "slippi-connection-panel.html",
         "headerColor": "#2d4e8a",
-        "workspace": "Main Dash"
+        "workspace": "1. Main Dash"
       },
       {
         "name": "timer",
@@ -70,7 +74,7 @@
         "width": 2,
         "file": "match-timer-panel.html",
         "headerColor": "#2d4e8a",
-        "workspace": "Main Dash"
+        "workspace": "1. Main Dash"
       },
       {
         "name": "tournament",
@@ -78,7 +82,7 @@
         "width": 3,
         "file": "tournament-panel.html",
         "headerColor": "#2d4e8a",
-        "workspace": "Main Dash"
+        "workspace": "1. Main Dash"
       },
       {
         "name": "players",
@@ -86,7 +90,7 @@
         "width": 6,
         "file": "player-panel.html",
         "headerColor": "#2d4e8a",
-        "workspace": "Main Dash"
+        "workspace": "1. Main Dash"
       },
       {
         "name": "templates",
@@ -94,7 +98,7 @@
         "width": 2,
         "file": "template-panel.html",
         "headerColor": "#2d4e8a",
-        "workspace": "Main Dash"
+        "workspace": "1. Main Dash"
       },
       {
         "name": "obs",
@@ -102,18 +106,30 @@
         "width": 2,
         "file": "obs-connection-panel.html",
         "headerColor": "#2d4e8a",
-        "workspace": "Main Dash"
+        "workspace": "1. Main Dash"
       },
       {
         "name": "startgg",
         "title": "Start.gg API",
-        "width": 2,
+        "width": 4,
         "file": "startgg-api-panel.html",
         "headerColor": "#2d4e8a",
-        "workspace": "Main Dash"
+        "workspace": "1. Main Dash"
       }
     ],
     "graphics": [
+	  {
+        "file": "buttonDisplay.html",
+        "width": 300,
+        "height": 1080,
+        "singleInstance": false
+      },
+      {
+        "file": "buttonDisplay2.html",
+        "width": 300,
+        "height": 1080,
+        "singleInstance": false
+      },
       {
         "file": "Tournament.html",
         "width": 1920,
@@ -145,27 +161,9 @@
         "singleInstance": false
       },
       {
-        "file": "buttonDisplay.html",
-        "width": 300,
-        "height": 1080,
-        "singleInstance": false
-      },
-      {
-        "file": "buttonDisplay2.html",
-        "width": 300,
-        "height": 1080,
-        "singleInstance": false
-      },
-      {
-        "file": "statsRadarChart.html",
+        "file": "Standings.html",
         "width": 1920,
-        "height": 600,
-        "singleInstance": false
-      },
-      {
-        "file": "endStockCount.html",
-        "width": 1920,
-        "height": 300,
+        "height": 1080,
         "singleInstance": false
       }
     ]

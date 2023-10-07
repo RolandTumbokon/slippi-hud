@@ -27,7 +27,7 @@ return css`
 }
 
 #layout {
-  height: 500px;
+  height: 880px;
 }
 
 #modeSelectCheckbox {

@@ -2,7 +2,7 @@
 	"$schema": "http://json-schema.org/draft-04/schema#",
 	"type": "object",
 	"properties": {
-		"syncEnabled": {
+		"tournamentSyncEnabled": {
 			"type": "boolean",
 			"default": false
 		},
@@ -31,6 +31,10 @@
 								"type": "number",
 								"default": -1
 							},
+							"lPlacement": {
+								"type": "number",
+								"default": -1
+							},
 							"startedAt": {
 								"type": "number",
 								"default": -1
@@ -40,7 +44,40 @@
 				}
 			}
 		},
+		"availableEvents": {
+			"type": "array",
+			"default": [],
+			"items": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number",
+						"default": -1
+					},
+					"name": {
+						"type": "string",
+						"default": ""
+					},
+					"type": {
+						"type": "number",
+						"default": -1
+					}
+				}
+			}
+		},
 		"selectedQueue": {
+			"type": "number",
+			"default": -1
+		},
+		"selectedEvent": {
+			"type": "number",
+			"default": -1
+		},
+		"boAutomationEnabled": {
+			"type": "boolean",
+			"default": false
+		},
+		"boIntegerThreshold": {
 			"type": "number",
 			"default": -1
 		}

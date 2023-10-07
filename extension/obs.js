@@ -1,7 +1,7 @@
 'use strict';
 
 //Imports
-const OBSWebSocket = require('obs-websocket-js');
+const OBSWebSocket = require('obs-websocket-js').default;
 
 //Ours
 const nodecg = require('./util/nodecg-api-context').get();
@@ -18,12 +18,11 @@ const obsWebSocket = new OBSWebSocket();
 var isConnecting = false;
 var waitSceneTimer = null;
 var sceneSwitchTimer = null;
-var lastScene = "";
+
 
 //Utils
 function checkAndSetNewScene(sceneName) {
-
-	if (sceneName && obs.value.scenes.activeScene && sceneName != obs.value.scenes.activeScene) {
+	if (sceneName /*&& obs.value.scenes.activeScene*/ && sceneName != obs.value.scenes.activeScene) {
 
 		//Cancel any existing pending scene switches
 		if (sceneSwitchTimer) {
@@ -43,49 +42,77 @@ function checkAndSetNewScene(sceneName) {
 		else {
 			obs.value.scenes.activeScene = sceneName;
 		}
+		
 	}
+
 }
 
 function checkSceneSwitchConditions() {
 
-	// if (!tournament.value.autoScore && !slippi.value.gameInfo.finished) {
-	// 	return "TO: Handwarmer";
-	// }
-	// else if (tournament.value.autoScore && !slippi.value.gameInfo.finished) {
-	// 	return "TO: Tournament";
-	// }
+	let targetScene = "";
+
 	if (!tournament.value.autoScore && !slippi.value.gameInfo.finished) {
-	 	return "Melee Stream";
+		targetScene = "Handwarmer";
+	}
+	else if (tournament.value.autoScore && !slippi.value.gameInfo.finished) {
+		targetScene = "Tournament";
 	}
 	else if (slippi.value.gameInfo.finished && tournament.value.matchScored && obs.value.scenes.activeScene && obs.value.scenes.activeScene != "Wait") {
 
 		//Skip stats scenes in Doubles mode as there are no stats available, go straight to Wait Scene
 		if (slippi.value.gameInfo.isTeams) {
-			return "TO: Wait";
+			targetScene = "Wait";
 		}
 		else {
 
-			//Start Wait Scene timer no matter what if needed in Singles mode | I don't see waitSceneTimer used?
-			// if (!waitSceneTimer) {
-			// 	console.log(`DEBUG: Switching to TO: Wait`);
-			// 	waitSceneTimer = setTimeout(() => {
-			// 		checkAndSetNewScene("TO: Wait");
-			// 	}, obs.value.scenes.waitTime);
-			// }
+			//If enabled, start Wait Scene timer no matter what if needed in Singles mode
+			if (!waitSceneTimer) {
 
-			if (obs.value.scenes.activeScene != "TO: Game End" && obs.value.scenes.activeScene != "TO: Set End") {
+				let switchEnabled = nodecg.bundleConfig.obs && nodecg.bundleConfig.obs.scenes && "Wait" in nodecg.bundleConfig.obs.scenes && "autoSwitch" in nodecg.bundleConfig.obs.scenes["Wait"] ? nodecg.bundleConfig.obs.scenes["Wait"].autoSwitch : true;
+
+				if (switchEnabled) {
+					waitSceneTimer = setTimeout(() => {
+						checkAndSetNewScene("Wait");
+					}, obs.value.scenes.waitTime);
+				}
+			}
+
+			if (obs.value.scenes.activeScene != "Game End" && obs.value.scenes.activeScene != "Set End") {
 
 				if (tournament.value.scores[0].score < (tournament.value.bestOf / 2) && tournament.value.scores[1].score < (tournament.value.bestOf / 2)) {
-					return "TO: Game End";
+					targetScene = "Game End";
 				}
 				else if (tournament.value.scores[0].score > (tournament.value.bestOf / 2) || tournament.value.scores[1].score > (tournament.value.bestOf / 2)) {
-					return "TO: Set End";
+					targetScene = "Set End";
 				}
 			}
 		}
 	}
-	console.log(`returning default scene TO: Game End`);
-	return "TO: Game End";
+
+	//Account for adjustment logic from user config
+	if (targetScene) {
+		let switchEnabled = nodecg.bundleConfig.obs && nodecg.bundleConfig.obs.scenes && targetScene in nodecg.bundleConfig.obs.scenes && "autoSwitch" in nodecg.bundleConfig.obs.scenes[targetScene] ? nodecg.bundleConfig.obs.scenes[targetScene].autoSwitch : true;
+
+		if (!switchEnabled) {
+
+			let gameEnabled = "Game End" in nodecg.bundleConfig.obs.scenes && "autoSwitch" in nodecg.bundleConfig.obs.scenes["Game End"] ? nodecg.bundleConfig.obs.scenes["Game End"].autoSwitch : true;
+			let setEnabled = "Set End" in nodecg.bundleConfig.obs.scenes && "autoSwitch" in nodecg.bundleConfig.obs.scenes["Set End"] ? nodecg.bundleConfig.obs.scenes["Set End"].autoSwitch : true;
+
+			//Swap to another fitting end scene if possible
+			if (targetScene == "Game End" && setEnabled) {
+				targetScene = "Set End";
+			}
+			else if (targetScene == "Set End" && gameEnabled) {
+				targetScene = "Game End";
+			}
+			else {
+				//Block the switch if disabled entirely
+				targetScene = "";
+			}
+		}
+	}
+
+	return targetScene;
 }
 
 function autoDetermineCorrectScene(sceneNameOverride = "") {
@@ -96,16 +123,13 @@ function autoDetermineCorrectScene(sceneNameOverride = "") {
 		return;
 
 	let newScene = sceneNameOverride === "" ? checkSceneSwitchConditions() : sceneNameOverride;
-	if (lastScene != newScene) {
-		console.log(`switching scene to ${newScene}`)
+	if (newScene?.length > 0) {
 		checkAndSetNewScene(newScene);
-		lastScene = newScene;
 	}
-		
 }
 
 //Replicant Listeners
-obs.on('change', (newVal, oldVal) => {
+obs.on('change', async (newVal, oldVal) => {
 
 	if (!newVal)
 		return;
@@ -118,21 +142,12 @@ obs.on('change', (newVal, oldVal) => {
 
 	//User forced scene takes priority (ToDo: this is executed silently too often)
 	if (!oldVal || newVal.scenes.activeScene != oldVal.scenes.activeScene) {
+		try {
+			await obsWebSocket.call("SetCurrentProgramScene", { sceneName: newVal.scenes.activeScene });
+		} catch (err) {
+			console.error("OBS failure to force scene:", err);
+		}
 
-		obsWebSocket.send('SetCurrentScene', { 'scene-name': newVal.scenes.activeScene }).catch(ex => {
-			console.log("OBS failure to force scene:", ex);
-
-			//Fix scene
-			obsWebSocket.send('GetCurrentScene').then(data => {
-
-				if (data.status === 'ok') {
-					console.log(`OBS reset active scene: ${data.name}`);
-					obs.value.scenes.activeScene = data.name;
-				}
-			}).catch(ex => {
-				console.log("OBS failure to query backup scene:", ex);
-			});
-		});
 	} else {
 		//Auto checks second priority
 		autoDetermineCorrectScene();
@@ -140,7 +155,6 @@ obs.on('change', (newVal, oldVal) => {
 });
 
 slippi.on('change', (newVal, oldVal) => {
-
 	if (!newVal)
 		return;
 
@@ -149,6 +163,7 @@ slippi.on('change', (newVal, oldVal) => {
 		clearTimeout(waitSceneTimer);
 		waitSceneTimer = null;
 	}
+
 	autoDetermineCorrectScene();
 });
 
@@ -171,7 +186,6 @@ obsWebSocket.on('SwitchScenes', (data) => {
 obsWebSocket.on('ConnectionOpened', (data) => {
 	obs.value.connection.connected = true;
 	isConnecting = false;
-	console.log("OBS connection opened");
 });
 
 obsWebSocket.on('ConnectionClosed', (data) => {
@@ -188,29 +202,22 @@ obsWebSocket.on('AuthenticationFailure', (data) => {
 });
 
 //NodeCG Listeners
-nodecg.listenFor('obs_connect', () => {
-
+nodecg.listenFor('obs_connect', async () => {
 	if (isConnecting || obs.value.connection.connected)
 		return;
 
-	isConnecting = true;
+	const address = `ws://${obs.value.connection.address}:${obs.value.connection.port}`;
+	const password = obs.value.connection.password ?? undefined;
 
-	obsWebSocket.connect({ address: `${obs.value.connection.address}:${obs.value.connection.port}`, password: obs.value.connection.password }).then(() => {
-
-		//Get active scene once upon successful connection
-		obsWebSocket.send('GetCurrentScene').then(data => {
-
-			if (data.status === 'ok') {
-				console.log(`OBS first active scene: ${data.name}`);
-				obs.value.scenes.activeScene = data.name;
-			}
-		}).catch(ex => {
-			console.log("OBS failure to query scene:", ex);
-		});
-	}).catch(ex => {
-		console.log("OBS failure to connect:", ex);
+	try {
+		isConnecting = true;
+		const { obsWebSocketVersion } = await obsWebSocket.connect(address, password);
+		console.log(`OBS connection opened. Version: ${obsWebSocketVersion}`);
+	} catch (error) {
+		console.error('Failed to connect', error.code, error.message);
 		isConnecting = false;
-	});
+		return ;
+	}
 });
 
 nodecg.listenFor('obs_disconnect', () => {

@@ -19,9 +19,13 @@ export class StartggApi extends LitElement {
 
 	static get properties() {
 		return {
-			syncEnabled: { type: Boolean },
+			tourneySyncEnabled: { type: Boolean },
 			tournamentSlug: { type: String },
-			selectedQueueIndex: { type: String }
+			selectedQueueIndex: { type: String },
+			boAutomationEnabled: { type: Boolean },
+			boIntegerThreshold: { type: Number },
+			topSelectedEventIndex: { type: String },
+			topStandingsGenerating: { type: Boolean }
 		}
 	}
 
@@ -33,10 +37,17 @@ export class StartggApi extends LitElement {
 
 		super();
 
-		this.syncEnabled = false;
+		this.tourneySyncEnabled = false;
 		this.tournamentSlug = "";
 		this.selectedQueueIndex = "";
 
+		//Bo Automation
+		this.boAutomationEnabled = false;
+		this.boIntegerThreshold = 0;
+
+		//Top 8 Generation
+		this.topSelectedEventIndex = "";
+		this.topStandingsGenerating = false;
 
 		const replicants =
 			[
@@ -56,13 +67,23 @@ export class StartggApi extends LitElement {
 						if (!newVal)
 							return;
 
-						this.syncEnabled = newVal.syncEnabled;
+						this.tourneySyncEnabled = newVal.tournamentSyncEnabled;
 						this.tournamentSlug = newVal.tournamentSlug;
 
 						if (newVal.selectedQueue < 0)
 							this.selectedQueueIndex = "";
 						else
 							this.selectedQueueIndex = newVal.selectedQueue.toString();
+
+						//Bo Automation
+						this.boAutomationEnabled = newVal.boAutomationEnabled;
+						this.boIntegerThreshold = newVal.boIntegerThreshold;
+
+						//Top 8 Generation
+						if (!("selectedEvent" in newVal) || newVal.selectedEvent < 0)
+							this.topSelectedEventIndex = "";
+						else
+							this.topSelectedEventIndex = newVal.selectedEvent.toString();
 
 						this.requestUpdate();
 						ready = true;
@@ -75,6 +96,7 @@ export class StartggApi extends LitElement {
 
 	updated(changedProperties) {
 
+		//Stream Queues
 		this.renderRoot.querySelector('#selectedQueue').renderer = function (root) {
 
 			//Check if there is a list-box generated with the previous renderer call to update its content instead of recreation
@@ -102,10 +124,39 @@ export class StartggApi extends LitElement {
 			//Add the list box
 			root.appendChild(listBox);
 		};
+
+		//Events
+		this.renderRoot.querySelector('#eventSelector').renderer = function (root) {
+
+			//Check if there is a list-box generated with the previous renderer call to update its content instead of recreation
+			if (root.firstChild) {
+				return;
+			}
+
+			//Create the <vaadin-list-box>
+			const listBox = window.document.createElement('vaadin-list-box');
+
+			if (ready && startgg && startgg.value && startgg.value.availableEvents) {
+
+				let index = 0;
+
+				startgg.value.availableEvents.forEach(function (event) {
+					const vaadinItem = window.document.createElement('vaadin-item');
+					vaadinItem.textContent = event.name;
+					vaadinItem.setAttribute('value', index.toString());
+
+					listBox.appendChild(vaadinItem);
+					index++;
+				});
+			}
+
+			//Add the list box
+			root.appendChild(listBox);
+		};
 	}
 
-	_syncEnabledCheckboxChange(event) {
-		startgg.value.syncEnabled = event.target.checked;
+	_tourneySyncEnabledCheckboxChange(event) {
+		startgg.value.tournamentSyncEnabled = event.target.checked;
 	}
 
 	_tournamentSlugChange(event) {
@@ -128,6 +179,54 @@ export class StartggApi extends LitElement {
 	_selectedQueueChange(event) {
 		let targetQueueIndex = Number.parseInt(event.target.value);
 		startgg.value.selectedQueue = targetQueueIndex;
+	}
+
+	_forceUpdateButtonClicked() {
+		nodecg.sendMessage("api_startgg_refresh");
+	}
+
+	//Bo Automation
+	_boAutomationEnabledCheckboxChange(event) {
+
+		//Clear threshold on new activations to avoid instant changes of best of setting
+		if (!startgg.value.boAutomationEnabled && event.target.checked) {
+			startgg.value.boIntegerThreshold = -1;
+		}
+
+		startgg.value.boAutomationEnabled = event.target.checked;
+	}
+
+	_boThresholdValueChange(event) {
+		let newValue = Number.parseInt(event.target.value);
+
+		if (newValue < -1 || newValue > 255)
+			return;
+
+		startgg.value.boIntegerThreshold = newValue;
+	}
+
+	//Top 8 Generation
+	_topSelectedEventChanged(event) {
+		let targetEventIndex = Number.parseInt(event.target.value);
+		startgg.value.selectedEvent = targetEventIndex;
+	}
+
+	_topGenerateButtonClicked() {
+
+		this.topStandingsGenerating = true;
+
+		nodecg.sendMessage('api_startgg_generateTopStandings', 0, (error, result) => {
+
+			this.topStandingsGenerating = false;
+
+			if (error) {
+				console.error(error);
+				alert(error.message);
+				return;
+			}
+
+			alert("Standings generated!");
+		});
 	}
 }
 

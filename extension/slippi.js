@@ -14,6 +14,8 @@ const { computeSlpStats } = require("./stats");
 
 //Replicants
 const slippi = nodecg.Replicant('slippi');
+const tournament = nodecg.Replicant('tournament');
+const players = nodecg.Replicant('players');
 
 //Statics
 const slippi_matchTimer = "08:00";
@@ -22,6 +24,7 @@ const slippi_consoleNickname = "unknown";
 
 var globalStream = null;
 var realTimeSubs = [];
+var externalConsumers = [];
 
 //Create timer
 slippi.value.gameInfo.timer = new TimeObject(slippi.value.gameInfo.timer.rawFrames, slippi_frameRate);
@@ -271,7 +274,48 @@ function runConnection() {
 
 				//console.log("Button inputs changed, now:", player.controller);
 			}
+
+			//Update misc data every time
+			player.misc = {
+				isFollower: framePlayer.post.isFollower,
+				actionStateId: framePlayer.post.actionStateId,
+				positionX: framePlayer.post.positionX,
+				positionY: framePlayer.post.positionY,
+				facingDirection: framePlayer.post.facingDirection,
+				shieldSize: framePlayer.post.shieldSize,
+				lastAttackLanded: framePlayer.post.lastAttackLanded,
+				currentComboCount: framePlayer.post.currentComboCount,
+				lastHitBy: framePlayer.post.lastHitBy,
+				actionStateCounter: framePlayer.post.actionStateCounter,
+				miscActionState: framePlayer.post.miscActionState == NaN || isNaN(framePlayer.post.miscActionState) || !isFinite(framePlayer.post.miscActionState) ? -1 : framePlayer.post.miscActionState,
+				isAirborne: framePlayer.post.isAirborne,
+				lastGroundId: framePlayer.post.lastGroundId,
+				jumpsRemaining: framePlayer.post.jumpsRemaining,
+				lCancelStatus: framePlayer.post.lCancelStatus,
+				hurtboxCollisionState: framePlayer.post.hurtboxCollisionState,
+				selfInducedSpeeds: {
+					airX: framePlayer.post.selfInducedSpeeds.airX,
+					y: framePlayer.post.selfInducedSpeeds.y,
+					attackX: framePlayer.post.selfInducedSpeeds.attackX,
+					attackY: framePlayer.post.selfInducedSpeeds.attackY,
+					groundX: framePlayer.post.selfInducedSpeeds.groundX
+				}
+			};
 		}
+
+		//Update external consumers
+		for (let callback of externalConsumers) {
+
+			if (callback) {
+
+				if (typeof (callback) == "object") { //Function with specific context (e.g. class)
+					callback.function.call(callback.context, frame);
+				}
+				else { //Static function
+					callback(frame);
+				}
+			}
+		}		
 	}));
 }
 
@@ -295,7 +339,7 @@ async function connectToSlippi(type = "dolphin", address = "0.0.0.0", slpPort = 
 
 	stream.connection.on(ConnectionEvent.ERROR, (err) => {
 		//Silently ignore errors for now
-		//console.error(err);
+		//console.error("Slippi error:", err);
 	});
 
 	stream.connection.once(ConnectionEvent.CONNECT, () => {
@@ -322,8 +366,55 @@ async function connectToSlippi(type = "dolphin", address = "0.0.0.0", slpPort = 
 	});
 
 	stream.on(SlpFileWriterEvent.FILE_COMPLETE, filePath => {
-		console.log("Dumped a SLP recording to:", filePath);
-		nodecg.sendMessage("stats_finishGame", filePath);
+
+		let pathExtras = [];
+
+		if (tournament.value.name && tournament.value.name.length > 0) {
+			pathExtras.push(tournament.value.name);
+
+			if (tournament.value.round && tournament.value.round.length > 0) {
+				pathExtras.push(tournament.value.round);
+
+				if (!tournament.value.isTeams) { //Singles, grab player 1 and player 2
+
+					if (players.value && players.value.length > 1) {
+						pathExtras.push(`${players.value[0].name} vs ${players.value[1].name}`);
+					}
+				}
+				else { //Doubles, grab all 4 names
+
+					if (players.value && players.value.length > 3) {
+						pathExtras.push(`${players.value[0].name},${players.value[1].name} vs ${players.value[2].name},${players.value[3].name}`);
+					}
+				}
+			}
+		}
+
+		//Sanitize the extra paths before creating the directory
+		for (let n = 0; n < pathExtras.length; n++) {
+			pathExtras[n] = pathExtras[n].replace(/([^a-z0-9\s_\-\',\#]+)/gi, '');
+		}
+
+		let finalPathCombined = path.join(slippi_recordingsPath, ...pathExtras);
+
+		//Ensure the final slp recording folder exists
+		if (!fs.existsSync(finalPathCombined))
+			fs.mkdirSync(finalPathCombined, { recursive: true });
+
+		//Note: Delay here is necessary as LRAS game endings delay the slp file flushing
+		setTimeout(() => {
+
+			console.log("Dumped a SLP recording to:", filePath);
+
+			//Move the file
+			let fileName = path.basename(filePath);
+			finalPathCombined = path.join(finalPathCombined, fileName);
+
+			console.log("New final SLP path:", finalPathCombined);
+			fs.renameSync(filePath, finalPathCombined);
+
+			nodecg.sendMessage("stats_finishGame", finalPathCombined);
+		}, 100);
 	});
 
 	globalStream = stream;
@@ -364,6 +455,11 @@ nodecg.listenFor('slippi_connect', (params) => {
 nodecg.listenFor('slippi_disconnect', () => {
 	disconnectFromSlippi();
 });
+
+//External hook for high performance frame data consumption
+global.slippi_registerExternalConsumer = function (callback) {
+	externalConsumers.push(callback);
+}
 
 
 //TEST
