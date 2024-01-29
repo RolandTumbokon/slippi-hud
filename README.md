@@ -1,53 +1,59 @@
-# Slippi-HUD
-### A Slippi powered stream overlay
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-Welcome to Slippi-HUD, a nodecg package that can be used to power all kinds of slippi powered melee streams. You can create your own custom HUD, or an auto updating stream overlay.
+# SlippiHUD
 
-# FAQ
-### How do I use this?
-[Use the Wiki](https://github.com/SSBDoppler/slippi-hud/wiki)
-### Why, just Why?
-I'm a madman, obviously
-### Hey, my font doesn't look right.
-That's not a question, but you likely need to install the [Metropolis Light and Metropolis Black Fonts](https://www.1001fonts.com/metropolis-font.html)
-### I don't like the way it looks
-And? All you have to do is make your own html/css, the source code is right here.
-### What are all the variables I can call?
-The Debug template contains the answers you seek.
-### Whats this coded in?
-Node, Javascript, and [Lit](https://lit.dev) as I understand.
-# Credits
-## Design Director
-### Steven 'Doppler12' Knepper
-#### Wrote the HUD css/html (that's my hackery), Designed the graphical elements, runs the git
-SlippiHUD@gmail.com
+A nodecg package that can be used to power all kinds of slippi powered melee streams. You can create your own custom HUD, or an auto updating stream overlay.
 
-## Lead Programmer
-### Marwin 'dragonbane0' Misselhorn
-#### wrote the whole backend that plugs into slippi
-[website](https://misselhorn.xyz/)
+I use this to track player's inputs and display them. Highly customizable with HTML and CSS
 
-[github](https://github.com/dragonbane0)
 
-## Graphics
-### Joel 'Potsy' Kaplan
-##### Classic HUD and pillar-box art
-[Twitter](https://twitter.com/potsyjk)
+## Demo
 
-### 8VibesStudio
-##### New Logo and New HUD
-[Facebook](https://www.facebook.com/8vibestudios)
+[![Watch the Demo](https://img.youtube.com/vi/qUuaYQbx2sY/hqdefault.jpg)](https://www.youtube.com/watch?v=qUuaYQbx2sY
+)
 
-## Special Thanks
-### Jas Laferriere and the Slippi team
-#### Slippi
-[Project Slippi](https://github.com/project-slippi)
+## Installation
 
-### Vince Au
-#### Slp-Realtime & Slippi-Stats
-[Slp-Realtime](https://github.com/vinceau)
+Clone this repo on your Github Desktop. There are other ways, but this is the easiest. 
 
-### David V. Kimball
-#### Melee HD Assets
-[website](http://davidvkimball.com)
+
+Install nodecg with npm in command prompt
+
+```bash
+  npm install --global nodecg-cli
+  nodecg install
+```
+
+Make a folder in Documents to install nodecg
+
+```bash
+  cd Documents
+  mkdir nodecg
+  cd nodecg
+```
+    
+Run slippihud.bat and uncomment code for first time installs and change directory name from mine
+
+This will copy files over to the nodecg folder where nodecg will install and run
+## Run Locally
+
+Go to http://localhost:9090/ in your browser. This is where nodecg framework is held 
+
+Make sure to hit "Connect" to connect to slippi. and 'rabious-template' is the Active Template
+
+On the top right, there is a button that will take you to the Graphics pages. buttondisplay.html and 
+buttondisplay2.html is where the inputs are displayed
+
+## Connect to OBS
+
+Create a new browser source in OBS with the URL of the button displays. The width and height is dependent on your stream setup. 
+
+Add custom CSS: 
+
+```
+   body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }
+
+```
+Do this for both HTML pages. At this point everything should be working. If it doesn't work head to the [main wiki](https://github.com/SSBDoppler/slippi-hud/wiki)
+
+
+## Forked from [slippi-hud](https://github.com/SSBDoppler/slippi-hud)
