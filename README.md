@@ -8,8 +8,8 @@ I use this to track player's inputs and display them. Highly customizable with H
 
 ## Demo
 
-[![Watch the Demo](https://img.youtube.com/vi/qUuaYQbx2sY/hqdefault.jpg)](https://www.youtube.com/watch?v=qUuaYQbx2sY
-)
+__[![Watch the Demo](https://img.youtube.com/vi/qUuaYQbx2sY/hqdefault.jpg)](https://www.youtube.com/watch?v=qUuaYQbx2sY
+)__
 
 ## Installation
 
@@ -53,7 +53,7 @@ Add custom CSS:
    body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; }
 
 ```
-Do this for both HTML pages. At this point everything should be working. If it doesn't work head to the [main wiki](https://github.com/SSBDoppler/slippi-hud/wiki)
+Do this for both HTML pages. At this point everything should be working. If it doesn't work head to the __[main wiki](https://github.com/SSBDoppler/slippi-hud/wiki)__
 
 
-## Forked from [slippi-hud](https://github.com/SSBDoppler/slippi-hud)
+## Forked from __[slippi-hud](https://github.com/SSBDoppler/slippi-hud)__
